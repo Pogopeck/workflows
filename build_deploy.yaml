@@ -1,0 +1,26 @@
+name: Build & Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'APP (artemis, keycloak, wildfly)'
+        required: true
+      env:
+        description: 'ENV (dev, preprod, prod)'
+        required: true
+jobs:
+  build:
+    uses: VFDE-DT/palladium-reusable-workflows/.github/workflows/build_push.yml@vosima
+    with:
+      JF_URL: "artifactory.vodafone.com"
+      JF_REG_PATH: "docker-vfde-incubator-local"
+      APPLICATION: "${{ github.event.inputs.app }}"
+      PROJECT: "vosima"
+      DOCKERFILE: "${{ github.event.inputs.app }}/Dockerfile"
+      ENVIRONMENT: "${{ github.event.inputs.env }}"
+    secrets:
+      JF_TOKEN: ${{secrets.JF_TOKEN}}
+      JF_USER: ${{secrets.JF_USER}}
+      AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID_EXT}}
+      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_KEY_EXT}}
+      AWS_ACCOUNT_ID: ${{secrets.AWS_ACCOUNT_ID_EXT}}
