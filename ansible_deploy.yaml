@@ -1,0 +1,49 @@
+name: Ansible Deployment
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'ENV (DEV, PREPROD, PROD)'
+        required: true
+
+jobs:
+  deploy-vosima:
+    runs-on:
+      - self-hosted
+      - noa
+    container:
+      image: public.ecr.aws/r0w2j4k7/kube-tools:latest
+    steps:
+      - uses: VFDE-DT/actions-checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: VFDE-DT/actions-configure-aws-credentials@main
+        with:
+          aws-access-key-id: ${{ secrets[format('AWS_ACCESS_KEY_ID_{0}' ,inputs.env)] }}
+          aws-secret-access-key: ${{ secrets[format('AWS_SECRET_KEY_{0}' ,inputs.env)] }}
+          aws-region: eu-central-1
+
+      - run: aws sts get-caller-identity
+
+      - name: Copy env file based on environment
+        run: |
+          ls -lta
+          ls -lta env/
+          cp env/env_${environment} .env
+        env:
+          environment: ${{ inputs.env }}
+
+      - uses: VFDE-DT/actions-export-env@main
+        with:
+          envFile: '.env'
+
+      - name: Get EKS kubeconfig
+        run: |
+          aws eks update-kubeconfig --region eu-central-1 --name ${cluster_name}
+          mkdir ./tmp
+          apt update && apt install -y python3 pip
+          pip install ansible
+          ansible-playbook -i inventory/hosts playbooks/1-k8s-deployment.yml
+        env:
+          environment: ${{ inputs.env }}
+          cluster_name: ${{ vars[format('CLUSTER_{0}' ,inputs.env)] }}
